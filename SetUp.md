@@ -39,7 +39,7 @@
 
 You can now use the following in your readme:
 
-```[![Spotify](https://USER_NAME.vercel.app/api/spotify)](https://www.last.fm/user/USER_NAME)```
+```[![Music](https://USER_NAME.vercel.app/api/music)](https://www.last.fm/user/USER_NAME)```
 
 ## Customization
 
