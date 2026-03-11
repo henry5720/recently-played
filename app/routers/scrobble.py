@@ -2,9 +2,9 @@ from typing import Optional
 
 from fastapi import APIRouter, Header, Query, HTTPException
 
-from src.core.config import settings
-from src.core.lastfm import scrobble_track, update_now_playing
-from src.schemas.scrobble import (
+from ..core.config import settings
+from ..core.lastfm import scrobble_track, update_now_playing
+from ..schemas.scrobble import (
     ScrobbleRequest,
     ScrobbleResponse,
     ErrorResponse,

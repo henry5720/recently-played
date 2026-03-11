@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from src.routers import music, callback, scrobble
+from .routers import music, callback, scrobble
 
 app = FastAPI(
     title="Last.fm Widget API",
