@@ -1,0 +1,38 @@
+from typing import Literal
+
+from pydantic import BaseModel
+
+
+class ScrobbleRequest(BaseModel):
+    artist: str
+    track: str
+    action: Literal["scrobble", "nowplaying"] = "scrobble"
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "artist": "Radiohead",
+                "track": "Creep",
+                "action": "scrobble"
+            }
+        }
+    }
+
+
+class ScrobbleResponse(BaseModel):
+    status: str
+    action: str
+    artist: str
+    track: str
+    result: dict
+
+
+class ErrorResponse(BaseModel):
+    error: str
+    message: str
+
+
+class UsageResponse(BaseModel):
+    status: str
+    message: str
+    usage: dict

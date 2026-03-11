@@ -76,6 +76,72 @@ If you have issues setting up, try checking out the functions tab in vercel, lin
 
 You will see a log there, and most issues can be resolved by ensuring you have the correct variables from setup.
 
+## Scrobble API (Optional)
+
+If you want to scrobble from other apps (e.g., NetEase Cloud Music via MacroDroid), you can use the scrobble API.
+
+### 1. Get Session Key
+
+First, you need to authorize the app to scrobble on your behalf:
+
+1. Add `LASTFM_API_SECRET` (your Shared Secret) to Vercel environment variables
+2. Set the callback URL in your [Last.fm API settings](https://www.last.fm/api/accounts) to:
+   ```
+   https://YOUR_VERCEL_URL.vercel.app/api/callback
+   ```
+3. Visit `https://YOUR_VERCEL_URL.vercel.app/api/callback`
+4. Click "Authorize with Last.fm" and grant permission
+5. Copy the displayed Session Key
+6. Add `LASTFM_SESSION_KEY` to Vercel environment variables
+7. Redeploy
+
+### 2. Use the Scrobble API
+
+Send a POST request to `/api/scrobble`:
+
+```
+POST https://YOUR_VERCEL_URL.vercel.app/api/scrobble
+Content-Type: application/json
+
+{
+  "artist": "Artist Name",
+  "track": "Track Name",
+  "action": "scrobble"  // or "nowplaying"
+}
+```
+
+### 3. MacroDroid Setup
+
+To scrobble from NetEase Cloud Music on Android:
+
+**Trigger:**
+- Notification Received → Select "NetEase Cloud Music"
+
+**Action:**
+- HTTP Request (POST)
+- URL: `https://YOUR_VERCEL_URL.vercel.app/api/scrobble`
+- Content Type: `application/json`
+- Body: `{"artist":"[notification_title]","track":"[notification_text]"}`
+
+### 4. Security (Optional)
+
+To protect the scrobble API from unauthorized use:
+
+1. Add `SCROBBLE_API_TOKEN` to Vercel environment variables (any random string)
+2. Include the token in your requests:
+   - Header: `X-API-Token: YOUR_TOKEN`
+   - Or query param: `?token=YOUR_TOKEN`
+
+### Environment Variables Summary
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `LASTFM_API_KEY` | Yes | Your Last.fm API key |
+| `LASTFM_USERNAME` | Yes | Your Last.fm username |
+| `LASTFM_API_SECRET` | For scrobble | Your Last.fm Shared Secret |
+| `LASTFM_SESSION_KEY` | For scrobble | Session key from authorization |
+| `SCROBBLE_API_TOKEN` | Optional | API token for security |
+
 ## Migration from Spotify API
 
 If you were previously using the Spotify API directly, you'll need to:
