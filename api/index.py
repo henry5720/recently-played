@@ -1,5 +1,5 @@
 from mangum import Mangum
 
-from api.main import app
+from .main import app
 
 handler = Mangum(app)

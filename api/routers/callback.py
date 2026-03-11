@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import HTMLResponse
 
-from api.core.config import settings
-from api.core.lastfm import get_session_key
+from ..core.config import settings
+from ..core.lastfm import get_session_key
 
 router = APIRouter()
 

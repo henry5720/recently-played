@@ -7,7 +7,7 @@ from fastapi import APIRouter
 from fastapi.responses import Response
 from jinja2 import Environment, FileSystemLoader
 
-from api.core.lastfm import get_now_playing, get_recently_played
+from ..core.lastfm import get_now_playing, get_recently_played
 
 router = APIRouter()
 

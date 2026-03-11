@@ -4,7 +4,7 @@ from typing import Optional
 
 import requests
 
-from api.core.config import settings
+from .config import settings
 
 LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/"
 
