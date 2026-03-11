@@ -94,7 +94,62 @@ def get_session_key(token: str) -> dict:
     return response.json()
 
 
-def scrobble_track(artist: str, track: str, timestamp: Optional[int] = None) -> dict:
+def get_track_info(artist: str, track: str) -> dict:
+    """Get track info from Last.fm database.
+    
+    Returns track details including album name and corrected artist/track names.
+    """
+    params = {
+        "method": "track.getInfo",
+        "artist": artist,
+        "track": track,
+        "api_key": settings.LASTFM_API_KEY,
+        "format": "json",
+        "autocorrect": "1",
+    }
+    response = requests.get(LASTFM_API_URL, params=params)
+    if response.status_code != 200:
+        return {}
+    try:
+        return response.json()
+    except requests.exceptions.JSONDecodeError:
+        return {}
+
+
+def lookup_and_enrich_track(artist: str, track: str) -> dict:
+    """Lookup track in Last.fm and return enriched info.
+    
+    Returns:
+        dict with keys: artist, track, album, found
+        - If found: uses Last.fm's corrected names and album
+        - If not found: returns original values with found=False
+    """
+    data = get_track_info(artist, track)
+    
+    if not data or "track" not in data:
+        return {
+            "artist": artist,
+            "track": track,
+            "album": "",
+            "found": False,
+        }
+    
+    track_data = data["track"]
+    album_name = ""
+    if "album" in track_data:
+        album_name = track_data["album"].get("title", "")
+    
+    return {
+        "artist": track_data.get("artist", {}).get("name", artist),
+        "track": track_data.get("name", track),
+        "album": album_name,
+        "found": True,
+    }
+
+
+def scrobble_track(
+    artist: str, track: str, album: Optional[str] = None, timestamp: Optional[int] = None
+) -> dict:
     """Scrobble a track to Last.fm."""
     if timestamp is None:
         timestamp = int(time.time())
@@ -107,6 +162,8 @@ def scrobble_track(artist: str, track: str, timestamp: Optional[int] = None) -> 
         "track": track,
         "timestamp": str(timestamp),
     }
+    if album:
+        params["album"] = album
     params["api_sig"] = generate_api_sig(params)
     params["format"] = "json"
 
@@ -114,7 +171,7 @@ def scrobble_track(artist: str, track: str, timestamp: Optional[int] = None) -> 
     return response.json()
 
 
-def update_now_playing(artist: str, track: str) -> dict:
+def update_now_playing(artist: str, track: str, album: Optional[str] = None) -> dict:
     """Update now playing status on Last.fm."""
     params = {
         "method": "track.updateNowPlaying",
@@ -123,6 +180,8 @@ def update_now_playing(artist: str, track: str) -> dict:
         "artist": artist,
         "track": track,
     }
+    if album:
+        params["album"] = album
     params["api_sig"] = generate_api_sig(params)
     params["format"] = "json"
 

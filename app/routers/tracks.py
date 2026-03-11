@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 from fastapi import APIRouter, Header, Query, HTTPException
 
@@ -11,10 +11,45 @@ from ..core.lastfm import (
     search_track,
     scrobble_track,
     update_now_playing,
+    lookup_and_enrich_track,
 )
 from ..schemas.scrobble import ScrobbleRequest, ScrobbleResponse, ErrorResponse
 
 router = APIRouter(prefix="/tracks", tags=["Tracks"])
+
+
+def parse_track_info(artist: str, track: str) -> Tuple[str, str]:
+    """Parse and normalize artist/track info from various notification formats.
+    
+    Handles formats like:
+    - artist="Artist - Album", track="Song" (NetEase Cloud Music style)
+    - artist="Artist - Song", track="" (combined format)
+    - artist="Artist", track="Song" (normal format)
+    
+    Examples:
+    - artist="ROSÉ - R", track="Gone" → ("ROSÉ", "Gone")
+    - artist="杜宣达 - 习惯性依赖", track="" → ("杜宣达", "习惯性依赖")
+    """
+    artist = artist.strip() if artist else ""
+    track = track.strip() if track else ""
+    
+    if " - " in artist:
+        parts = artist.split(" - ", 1)
+        parsed_artist = parts[0].strip()
+        
+        if track:
+            return parsed_artist, track
+        
+        parsed_track = parts[1].strip() if len(parts) > 1 else ""
+        if parsed_track:
+            return parsed_artist, parsed_track
+    
+    if " - " in track and not artist:
+        parts = track.split(" - ", 1)
+        if len(parts) == 2:
+            return parts[0].strip(), parts[1].strip()
+    
+    return artist, track
 
 
 def verify_token(token: Optional[str]) -> None:
@@ -270,9 +305,15 @@ async def scrobble(
 ):
     """Scrobble a track to Last.fm.
     
-    - **artist**: Artist name (required)
+    - **artist**: Artist name (required, supports "Artist - Track" format)
     - **track**: Track name (required)  
     - **action**: Either "scrobble" or "nowplaying" (default: scrobble)
+    
+    Auto-parsing: If artist contains " - " (e.g. "Artist - Track"), it will be
+    automatically split into separate artist and track fields.
+    
+    Auto-enrichment: Before scrobbling, the API looks up the track in Last.fm's
+    database to get the correct artist/track names and album info.
     
     Authentication (optional):
     - Header: `X-API-Token: YOUR_TOKEN`
@@ -281,11 +322,24 @@ async def scrobble(
     verify_token(x_api_token or token)
     check_config()
 
+    parsed_artist, parsed_track = parse_track_info(body.artist, body.track)
+    
+    if not parsed_artist or not parsed_track:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "Invalid input", "message": "Could not parse artist and track from input"}
+        )
+
+    enriched = lookup_and_enrich_track(parsed_artist, parsed_track)
+    final_artist = enriched["artist"]
+    final_track = enriched["track"]
+    final_album = enriched["album"]
+
     try:
         if body.action == "nowplaying":
-            result = update_now_playing(body.artist, body.track)
+            result = update_now_playing(final_artist, final_track, final_album)
         else:
-            result = scrobble_track(body.artist, body.track)
+            result = scrobble_track(final_artist, final_track, final_album)
 
         if "error" in result:
             raise HTTPException(
@@ -300,8 +354,10 @@ async def scrobble(
         return {
             "status": "ok",
             "action": body.action,
-            "artist": body.artist,
-            "track": body.track,
+            "artist": final_artist,
+            "track": final_track,
+            "album": final_album,
+            "enriched": enriched["found"],
             "result": result,
         }
 

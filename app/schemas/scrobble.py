@@ -5,16 +5,23 @@ from pydantic import BaseModel
 
 class ScrobbleRequest(BaseModel):
     artist: str
-    track: str
+    track: str = ""
     action: Literal["scrobble", "nowplaying"] = "scrobble"
 
     model_config = {
         "json_schema_extra": {
-            "example": {
-                "artist": "Radiohead",
-                "track": "Creep",
-                "action": "scrobble"
-            }
+            "examples": [
+                {
+                    "artist": "ROSÉ - R",
+                    "track": "Gone",
+                    "action": "nowplaying"
+                },
+                {
+                    "artist": "杜宣达 - 习惯性依赖",
+                    "track": "",
+                    "action": "scrobble"
+                }
+            ]
         }
     }
 
@@ -24,6 +31,8 @@ class ScrobbleResponse(BaseModel):
     action: str
     artist: str
     track: str
+    album: str = ""
+    enriched: bool = False
     result: dict
 
 
