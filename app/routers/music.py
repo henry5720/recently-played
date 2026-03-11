@@ -7,7 +7,7 @@ from fastapi import APIRouter
 from fastapi.responses import Response
 from jinja2 import Environment, FileSystemLoader
 
-from ..core.lastfm import get_now_playing, get_recently_played
+from ..core.lastfm import get_now_playing, get_recently_played, get_recent_tracks
 
 router = APIRouter()
 
@@ -97,3 +97,53 @@ async def get_widget():
         media_type="image/svg+xml",
         headers={"Cache-Control": "s-maxage=1"},
     )
+
+
+@router.get("/recent")
+async def get_recent(limit: int = 20, page: int = 1):
+    """Get recently played tracks as JSON with pagination.
+    
+    - **limit**: Tracks per page (default: 20, max: 200)
+    - **page**: Page number (default: 1)
+    """
+    if limit > 200:
+        limit = 200
+    if page < 1:
+        page = 1
+    
+    data = get_recent_tracks(limit=limit, page=page)
+    
+    if not data or "recenttracks" not in data:
+        return {
+            "tracks": [],
+            "page": page,
+            "per_page": limit,
+            "total_pages": 0,
+            "total": 0,
+        }
+    
+    attr = data["recenttracks"].get("@attr", {})
+    tracks = data["recenttracks"].get("track", [])
+    if not isinstance(tracks, list):
+        tracks = [tracks]
+    
+    return {
+        "tracks": [
+            {
+                "artist": t.get("artist", {}).get("#text", ""),
+                "track": t.get("name", ""),
+                "album": t.get("album", {}).get("#text", ""),
+                "image": next(
+                    (img.get("#text") for img in reversed(t.get("image", [])) if img.get("#text")),
+                    "",
+                ),
+                "now_playing": t.get("@attr", {}).get("nowplaying") == "true",
+                "date": t.get("date", {}).get("#text", ""),
+            }
+            for t in tracks
+        ],
+        "page": int(attr.get("page", page)),
+        "per_page": int(attr.get("perPage", limit)),
+        "total_pages": int(attr.get("totalPages", 0)),
+        "total": int(attr.get("total", 0)),
+    }

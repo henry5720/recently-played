@@ -17,7 +17,7 @@ def generate_api_sig(params: dict) -> str:
     return hashlib.md5(sig_string.encode("utf-8")).hexdigest()
 
 
-def get_recent_tracks(limit: int = 10) -> dict:
+def get_recent_tracks(limit: int = 10, page: int = 1) -> dict:
     """Get recent tracks from Last.fm."""
     params = {
         "method": "user.getrecenttracks",
@@ -25,6 +25,7 @@ def get_recent_tracks(limit: int = 10) -> dict:
         "api_key": settings.LASTFM_API_KEY,
         "format": "json",
         "limit": limit,
+        "page": page,
     }
     response = requests.get(LASTFM_API_URL, params=params)
     if response.status_code != 200:
