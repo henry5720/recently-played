@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from .routers import music, callback, scrobble
+from src.routers import music, callback, scrobble
 
 app = FastAPI(
     title="Last.fm Widget API",
@@ -11,6 +11,3 @@ app = FastAPI(
 app.include_router(music.router, tags=["Widget"])
 app.include_router(callback.router, prefix="/callback", tags=["Auth"])
 app.include_router(scrobble.router, prefix="/scrobble", tags=["Scrobble"])
-
-
-# Local dev: run from project root with `uvicorn api.main:app --reload`

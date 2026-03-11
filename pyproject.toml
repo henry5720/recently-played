@@ -1,0 +1,15 @@
+[project]
+name = "lastfm-widget"
+version = "1.0.0"
+description = "Display recently played tracks and scrobble to Last.fm"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.0",
+    "requests>=2.32.0",
+    "jinja2>=3.1.0",
+]
+
+[project.scripts]
+app = "src.index:app"
