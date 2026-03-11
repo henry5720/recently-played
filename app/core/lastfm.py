@@ -17,8 +17,20 @@ def generate_api_sig(params: dict) -> str:
     return hashlib.md5(sig_string.encode("utf-8")).hexdigest()
 
 
-def get_recent_tracks(limit: int = 10, page: int = 1) -> dict:
-    """Get recent tracks from Last.fm."""
+def get_recent_tracks(
+    limit: int = 10,
+    page: int = 1,
+    from_ts: Optional[int] = None,
+    to_ts: Optional[int] = None,
+) -> dict:
+    """Get recent tracks from Last.fm.
+    
+    Args:
+        limit: Number of tracks per page (max 200)
+        page: Page number
+        from_ts: Start timestamp (Unix timestamp)
+        to_ts: End timestamp (Unix timestamp)
+    """
     params = {
         "method": "user.getrecenttracks",
         "user": settings.LASTFM_USERNAME,
@@ -27,6 +39,11 @@ def get_recent_tracks(limit: int = 10, page: int = 1) -> dict:
         "limit": limit,
         "page": page,
     }
+    if from_ts is not None:
+        params["from"] = from_ts
+    if to_ts is not None:
+        params["to"] = to_ts
+    
     response = requests.get(LASTFM_API_URL, params=params)
     if response.status_code != 200:
         return {}
@@ -111,3 +128,176 @@ def update_now_playing(artist: str, track: str) -> dict:
 
     response = requests.post(LASTFM_API_URL, data=params)
     return response.json()
+
+
+def get_user_info() -> dict:
+    """Get user info from Last.fm."""
+    params = {
+        "method": "user.getinfo",
+        "user": settings.LASTFM_USERNAME,
+        "api_key": settings.LASTFM_API_KEY,
+        "format": "json",
+    }
+    response = requests.get(LASTFM_API_URL, params=params)
+    if response.status_code != 200:
+        return {}
+    try:
+        return response.json()
+    except requests.exceptions.JSONDecodeError:
+        return {}
+
+
+def get_top_artists(period: str = "overall", limit: int = 50, page: int = 1) -> dict:
+    """Get user's top artists.
+    
+    Args:
+        period: Time period - overall | 7day | 1month | 3month | 6month | 12month
+        limit: Number of results per page (max 1000)
+        page: Page number
+    """
+    params = {
+        "method": "user.gettopartists",
+        "user": settings.LASTFM_USERNAME,
+        "api_key": settings.LASTFM_API_KEY,
+        "format": "json",
+        "period": period,
+        "limit": limit,
+        "page": page,
+    }
+    response = requests.get(LASTFM_API_URL, params=params)
+    if response.status_code != 200:
+        return {}
+    try:
+        return response.json()
+    except requests.exceptions.JSONDecodeError:
+        return {}
+
+
+def get_top_tracks(period: str = "overall", limit: int = 50, page: int = 1) -> dict:
+    """Get user's top tracks.
+    
+    Args:
+        period: Time period - overall | 7day | 1month | 3month | 6month | 12month
+        limit: Number of results per page (max 1000)
+        page: Page number
+    """
+    params = {
+        "method": "user.gettoptracks",
+        "user": settings.LASTFM_USERNAME,
+        "api_key": settings.LASTFM_API_KEY,
+        "format": "json",
+        "period": period,
+        "limit": limit,
+        "page": page,
+    }
+    response = requests.get(LASTFM_API_URL, params=params)
+    if response.status_code != 200:
+        return {}
+    try:
+        return response.json()
+    except requests.exceptions.JSONDecodeError:
+        return {}
+
+
+def get_top_albums(period: str = "overall", limit: int = 50, page: int = 1) -> dict:
+    """Get user's top albums.
+    
+    Args:
+        period: Time period - overall | 7day | 1month | 3month | 6month | 12month
+        limit: Number of results per page (max 1000)
+        page: Page number
+    """
+    params = {
+        "method": "user.gettopalbums",
+        "user": settings.LASTFM_USERNAME,
+        "api_key": settings.LASTFM_API_KEY,
+        "format": "json",
+        "period": period,
+        "limit": limit,
+        "page": page,
+    }
+    response = requests.get(LASTFM_API_URL, params=params)
+    if response.status_code != 200:
+        return {}
+    try:
+        return response.json()
+    except requests.exceptions.JSONDecodeError:
+        return {}
+
+
+def get_loved_tracks(limit: int = 50, page: int = 1) -> dict:
+    """Get user's loved tracks."""
+    params = {
+        "method": "user.getlovedtracks",
+        "user": settings.LASTFM_USERNAME,
+        "api_key": settings.LASTFM_API_KEY,
+        "format": "json",
+        "limit": limit,
+        "page": page,
+    }
+    response = requests.get(LASTFM_API_URL, params=params)
+    if response.status_code != 200:
+        return {}
+    try:
+        return response.json()
+    except requests.exceptions.JSONDecodeError:
+        return {}
+
+
+def search_track(track: str, artist: Optional[str] = None, limit: int = 30, page: int = 1) -> dict:
+    """Search for tracks."""
+    params = {
+        "method": "track.search",
+        "track": track,
+        "api_key": settings.LASTFM_API_KEY,
+        "format": "json",
+        "limit": limit,
+        "page": page,
+    }
+    if artist:
+        params["artist"] = artist
+    response = requests.get(LASTFM_API_URL, params=params)
+    if response.status_code != 200:
+        return {}
+    try:
+        return response.json()
+    except requests.exceptions.JSONDecodeError:
+        return {}
+
+
+def search_artist(artist: str, limit: int = 30, page: int = 1) -> dict:
+    """Search for artists."""
+    params = {
+        "method": "artist.search",
+        "artist": artist,
+        "api_key": settings.LASTFM_API_KEY,
+        "format": "json",
+        "limit": limit,
+        "page": page,
+    }
+    response = requests.get(LASTFM_API_URL, params=params)
+    if response.status_code != 200:
+        return {}
+    try:
+        return response.json()
+    except requests.exceptions.JSONDecodeError:
+        return {}
+
+
+def search_album(album: str, limit: int = 30, page: int = 1) -> dict:
+    """Search for albums."""
+    params = {
+        "method": "album.search",
+        "album": album,
+        "api_key": settings.LASTFM_API_KEY,
+        "format": "json",
+        "limit": limit,
+        "page": page,
+    }
+    response = requests.get(LASTFM_API_URL, params=params)
+    if response.status_code != 200:
+        return {}
+    try:
+        return response.json()
+    except requests.exceptions.JSONDecodeError:
+        return {}
