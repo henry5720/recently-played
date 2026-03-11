@@ -1,71 +1,61 @@
 import os
-import json
 import random
 import requests
 
 from base64 import b64encode
 from dotenv import load_dotenv, find_dotenv
-from flask import Flask, Response, jsonify, render_template
+from flask import Flask, Response, render_template
 
 load_dotenv(find_dotenv())
 
-# Spotify scopes:
-#   user-read-currently-playing
-#   user-read-recently-played
-SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-SPOTIFY_SECRET_ID = os.getenv("SPOTIFY_SECRET_ID")
-SPOTIFY_REFRESH_TOKEN = os.getenv("SPOTIFY_REFRESH_TOKEN")
+LASTFM_API_KEY = os.getenv("LASTFM_API_KEY")
+LASTFM_USERNAME = os.getenv("LASTFM_USERNAME")
 
-REFRESH_TOKEN_URL = "https://accounts.spotify.com/api/token"
-NOW_PLAYING_URL = "https://api.spotify.com/v1/me/player/currently-playing"
-RECENTLY_PLAYING_URL = (
-    "https://api.spotify.com/v1/me/player/recently-played?limit=10"
-)
+LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/"
 
 app = Flask(__name__)
 
 
-def getAuth():
-    return b64encode(f"{SPOTIFY_CLIENT_ID}:{SPOTIFY_SECRET_ID}".encode()).decode(
-        "ascii"
-    )
-
-
-def refreshToken():
-    data = {
-        "grant_type": "refresh_token",
-        "refresh_token": SPOTIFY_REFRESH_TOKEN,
+def getRecentTracks(limit=10):
+    params = {
+        "method": "user.getrecenttracks",
+        "user": LASTFM_USERNAME,
+        "api_key": LASTFM_API_KEY,
+        "format": "json",
+        "limit": limit,
     }
-
-    headers = {"Authorization": "Basic {}".format(getAuth())}
-    response = requests.post(REFRESH_TOKEN_URL, data=data, headers=headers)
-
-    try:
-        return response.json()["access_token"]
-    except KeyError:
-        print(json.dumps(response.json()))
-        print("\n---\n")
-        raise KeyError(str(response.json()))
-
-
-def recentlyPlayed():
-    token = refreshToken()
-    headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(RECENTLY_PLAYING_URL, headers=headers)
-
-    if response.status_code == 204:
+    response = requests.get(LASTFM_API_URL, params=params)
+    if response.status_code != 200:
         return {}
-    return response.json()
+    try:
+        return response.json()
+    except requests.exceptions.JSONDecodeError:
+        return {}
 
 
 def nowPlaying():
-    token = refreshToken()
-    headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(NOW_PLAYING_URL, headers=headers)
-
-    if response.status_code == 204:
+    data = getRecentTracks(limit=1)
+    if not data or "recenttracks" not in data:
         return {}
-    return response.json()
+    tracks = data["recenttracks"].get("track", [])
+    if not tracks:
+        return {}
+    track = tracks[0] if isinstance(tracks, list) else tracks
+    if "@attr" in track and track["@attr"].get("nowplaying") == "true":
+        return {"item": track, "is_playing": True}
+    return {}
+
+
+def recentlyPlayed():
+    data = getRecentTracks(limit=10)
+    if not data or "recenttracks" not in data:
+        return {"items": []}
+    tracks = data["recenttracks"].get("track", [])
+    if not tracks:
+        return {"items": []}
+    if not isinstance(tracks, list):
+        tracks = [tracks]
+    return {"items": [{"track": t} for t in tracks]}
 
 
 def barGen(barCount):
@@ -83,8 +73,19 @@ def barGen(barCount):
 
 
 def loadImageB64(url):
-    resposne = requests.get(url)
-    return b64encode(resposne.content).decode("ascii")
+    if not url:
+        return ""
+    response = requests.get(url)
+    return b64encode(response.content).decode("ascii")
+
+
+def getTrackImage(track):
+    images = track.get("image", [])
+    for img in reversed(images):
+        url = img.get("#text", "")
+        if url:
+            return url
+    return ""
 
 
 def makeSVG(data):
@@ -92,19 +93,31 @@ def makeSVG(data):
     contentBar = "".join(["<div class='bar'></div>" for i in range(barCount)])
     barCSS = barGen(barCount)
 
-    if data == {} or data["item"] == "None":
-        # contentBar = "" #Shows/Hides the EQ bar if no song is currently playing
+    if data == {} or data.get("item") is None:
         currentStatus = "Was playing:"
         recentPlays = recentlyPlayed()
-        recentPlaysLength = len(recentPlays["items"])
+        items = recentPlays.get("items", [])
+        if not items:
+            return render_template(
+                "spotify.html.j2",
+                contentBar=contentBar,
+                barCSS=barCSS,
+                artistName="No recent tracks",
+                songName="",
+                image="",
+                status="",
+            )
+        recentPlaysLength = len(items)
         itemIndex = random.randint(0, recentPlaysLength - 1)
-        item = recentPlays["items"][itemIndex]["track"]
+        item = items[itemIndex]["track"]
     else:
         item = data["item"]
         currentStatus = "Vibing to:"
-    image = loadImageB64(item["album"]["images"][1]["url"])
-    artistName = item["artists"][0]["name"].replace("&", "&amp;")
-    songName = item["name"].replace("&", "&amp;")
+
+    imageUrl = getTrackImage(item)
+    image = loadImageB64(imageUrl)
+    artistName = item.get("artist", {}).get("#text", "Unknown Artist").replace("&", "&amp;")
+    songName = item.get("name", "Unknown Track").replace("&", "&amp;")
 
     dataDict = {
         "contentBar": contentBar,

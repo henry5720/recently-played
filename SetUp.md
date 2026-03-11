@@ -1,33 +1,26 @@
 # Set Up Guide
 
-## Spotify
+## Last.fm
 
-* Create a [Spotify Application](https://developer.spotify.com/dashboard/applications)
+### 1. Create a Last.fm Account
+
+* If you don't have one, register at [Last.fm](https://www.last.fm/join)
+
+### 2. Connect Spotify to Last.fm
+
+* Go to [Last.fm Settings > Applications](https://www.last.fm/settings/applications)
+* Connect your Spotify account to enable scrobbling
+
+### 3. Get API Key
+
+* Go to [Last.fm API Account](https://www.last.fm/api/account/create)
+* Create an API application (name can be anything like "My GitHub Widget")
 * Take note of:
-    * `Client ID`
-    * `Client Secret`
-* Click on **Edit Settings**
-* In **Redirect URIs**:
-    * Add `http://localhost/callback/`
+    * `API Key`
 
-## Refresh Token
+### 4. Get Your Username
 
-* Navigate to the following URL:
-
-```
-https://accounts.spotify.com/authorize?client_id={SPOTIFY_CLIENT_ID}&response_type=code&scope=user-read-currently-playing,user-read-recently-played&redirect_uri=http://localhost/callback/
-```
-
-* After logging in, save the {CODE} portion of: `http://localhost/callback/?code={CODE}`
-
-* Create a string combining `{SPOTIFY_CLIENT_ID}:{SPOTIFY_CLIENT_SECRET}` (e.g. `5n7o4v5a3t7o5r2e3m1:5a8n7d3r4e2w5n8o2v3a7c5`) and **encode** into [Base64](https://base64.io/).
-
-* Then run a [curl command](https://httpie.org/run) in the form of:
-```sh
-curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Authorization: Basic {BASE64}" -d "grant_type=authorization_code&redirect_uri=http://localhost/callback/&code={CODE}" https://accounts.spotify.com/api/token
-```
-
-* Save the Refresh token
+* Your Last.fm username is visible in your profile URL: `https://www.last.fm/user/{USERNAME}`
 
 ## Vercel
 
@@ -37,9 +30,8 @@ curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Authorizat
 
 * Add Environment Variables:
     * `https://vercel.com/<YourName>/<ProjectName>/settings/environment-variables`
-        * `SPOTIFY_REFRESH_TOKEN`
-        * `SPOTIFY_CLIENT_ID`
-        * `SPOTIFY_SECRET_ID`
+        * `LASTFM_API_KEY` - Your Last.fm API key
+        * `LASTFM_USERNAME` - Your Last.fm username
 
 * Deploy!
 
@@ -47,7 +39,7 @@ curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Authorizat
 
 You can now use the following in your readme:
 
-```[![Spotify](https://USER_NAME.vercel.app/api/spotify)](https://open.spotify.com/user/USER_NAME)```
+```[![Spotify](https://USER_NAME.vercel.app/api/spotify)](https://www.last.fm/user/USER_NAME)```
 
 ## Customization
 
@@ -59,7 +51,7 @@ Remove the `#` in front of `contentBar` in [line 81](https://github.com/novatore
 
 ### Status String
 
-Have a string saying either "Vibing to:" or "Last seen playing:".
+Have a string saying either "Vibing to:" or "Was playing:".
 
 * Change [`height` to `height + 40`](https://github.com/novatorem/novatorem/blob/5194a689253ee4c89a9d365260d6050923d93dd5/api/templates/spotify.html.j2#L1-L2) (or whatever `margin-top` is set to)
 * Uncomment [**.main**'s `margin-top`](https://github.com/novatorem/novatorem/blob/5194a689253ee4c89a9d365260d6050923d93dd5/api/templates/spotify.html.j2#L10)
@@ -67,16 +59,13 @@ Have a string saying either "Vibing to:" or "Last seen playing:".
 
 ## Requests
 
-Customization requests can be submitted as an issue, like https://github.com/novatorem/novatorem/issues/2
+Customization requests can be submitted as an issue.
 
 If you want to share your own customization options, open a PR if it's done or open an issue if you want it implemented by someone else.
 
 ## Debugging
 
-If you have issues setting up, try following this [guide](https://youtu.be/n6d4KHSKqGk?t=615).
-
-Followed the guide and still having problems?
-Try checking out the functions tab in vercel, linked as:
+If you have issues setting up, try checking out the functions tab in vercel, linked as:
 ```https://vercel.com/{name}/spotify/{build}/functions``` 
 
 <details><summary>Which looks like-</summary>
@@ -86,3 +75,18 @@ Try checking out the functions tab in vercel, linked as:
 </details><br>
 
 You will see a log there, and most issues can be resolved by ensuring you have the correct variables from setup.
+
+## Migration from Spotify API
+
+If you were previously using the Spotify API directly, you'll need to:
+
+1. Remove old environment variables:
+   - `SPOTIFY_CLIENT_ID`
+   - `SPOTIFY_SECRET_ID`
+   - `SPOTIFY_REFRESH_TOKEN`
+
+2. Add new Last.fm environment variables:
+   - `LASTFM_API_KEY`
+   - `LASTFM_USERNAME`
+
+3. Make sure your Spotify account is connected to Last.fm for scrobbling to work.
